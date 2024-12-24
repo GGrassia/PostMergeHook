@@ -1,0 +1,35 @@
+#!/bin/bash
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "$BASE_BRANCH" ]; then
+  echo "Current branch is not '$BASE_BRANCH', skipping automatic merge."
+  exit 0
+  else
+  echo "Branch is $BASE_BRANCH, starting branch sync"
+fi
+
+#search pattern with leading spaces removed
+FILTERED_BRANCHES=$(git branch | grep -i "$BRANCH_PATTERN" | sed 's/ *//')
+echo "Matching branches: $FILTERED_BRANCHES"
+if [ -z "$FILTERED_BRANCHES" ]; then
+  echo "No matching branches found. Exiting."
+  exit 0
+fi
+
+for BRANCH in $FILTERED_BRANCHES; do
+  echo "Merging $BASE_BRANCH into $BRANCH..."
+  
+  git checkout "$BRANCH"
+  if [ $? -ne 0 ]; then
+    echo "Failed to checkout $BRANCH. Exiting."
+    exit 1
+  fi
+  
+  git merge $BASE_BRANCH
+  if [ $? -ne 0 ]; then
+    echo "Merge conflict detected in $BRANCH. Stopping script and leaving you on this branch for manual resolution."
+    exit 1
+  fi
+done
+
+echo "All matching branches have been successfully merged with $BASE_BRANCH. Switching back to base branch."
+git checkout $BASE_BRANCH
